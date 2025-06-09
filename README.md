@@ -17,7 +17,7 @@ Examples:
 - powershell.exe -ExecutionPolicy Bypass -File .\Fcln.ps1 -Path C:\Temp -Before 90 -Clean # Scans the C:\Temp folder for files >90s and deletes them\
 - powershell.exe -ExecutionPolicy Bypass -File .\Fcln.ps1 -IncludeUser -Date 2025-01-01 # Scans the entire C:\drive including C:\Users for files created before Jan 1, 2025 and makes a report\
 
-**osSIM.ps1**\
+**simOS.ps1**\
 Inerative version 2.0 of fGen.ps1\
 This version is designed to more accurately represent a woring file system or live operation system for testing fCln against\
 Like the original, this script will produce a set number of files and folders within the specified start & end dates, with file sizes between 1 to 10mb.\
