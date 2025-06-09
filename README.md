@@ -4,19 +4,12 @@ This is a collection of personal PS scripts
 Run scripts with: `powershell.exe -ExecutionPolicy Bypass -File .\ScriptName.ps1`
 
 **fCln.ps1**:\
-This is a file cleanup script, designed to find files older than a specified date for perminent deletion.
-- Must be run with Administrator
-- Will always generate a report in HTML
-- The script will ignore critical system DIRs unless otherwise specified
-- Note: Including critical DIRs will prompt for confirmation and may increase script run time
-- Switches:
-  - -Path (Optional) can support comma separated list of paths to scan
-  - -Date (Required 1) Specify an exact date to find files created before
-  - -Before (Required 2) Specify a number of days
-  - -IncludeUser (Optional) specify if you want to include scanning user dirs (c:\users)
-  - -ReportOnly (Optional) run in report only mode, default if unspecified
-  - -ReportPath (Optional) specify the path to save the report, default c:\FclnRpt
-  - -Clean (Optional) perform deletions on files matched with either -Date or -Before
+Version 2.0 changes:
+- Interactive mode
+  - Execute the script without any switches to run in an interactive mode using defaults or specified parameters
+- Script will now ignore all folders containing Application related files:
+  - *.exe,*.dll,*.com,*.sys,*.ocx,*.msi,*.msu,*.msp,*.drv,*.cpl,*.msc,*.scr,*.vbs,*.ps1,*.bat,*.cmd,*.jar,*.py,*.sh
+- Script will not delete non-empty folders even if their modified date matches
   
 Examples:
 - powershell.exe -ExecutionPolicy Bypass -File .\Fcln.ps1 -Path C:\Temp -Before 90 # Scans the C:\Temp folder for files created >90 days ago and makes a report\
@@ -24,11 +17,21 @@ Examples:
 - powershell.exe -ExecutionPolicy Bypass -File .\Fcln.ps1 -Path C:\Temp -Before 90 -Clean # Scans the C:\Temp folder for files >90s and deletes them\
 - powershell.exe -ExecutionPolicy Bypass -File .\Fcln.ps1 -IncludeUser -Date 2025-01-01 # Scans the entire C:\drive including C:\Users for files created before Jan 1, 2025 and makes a report\
 
-**fGen.ps1**:\
-This is a file generation script used for validating fClean. It can generate a set number of files between 1-50Mb in size and place them into the DIR specified. It can also generate a set number of DIRs within the specified folder and randomly scatter the file throughout\
-The file names, extensions, and sizes are random\
-Script will prompt for Folder, Start Date, End Date, Sub Dir
+**osSIM.ps1**\
+Inerative version 2.0 of fGen.ps1\
+This version is designed to more accurately represent a woring file system or live operation system for testing fCln against\
+Like the original, this script will produce a set number of files and folders within the specified start & end dates, with file sizes between 1 to 10mb.\
+Expanded feature set:
+- Data Only mode: Replicates a data partition or folder
+- OS Mode: Replicates a working Windows Operating System, complete with \Users, \Program Files \Program Files (x86), etc
+- Application generation: When enabled it will prompt for number of application folders and generate files with application related extensions (.exe, .dll, etc) and place within the App- folder
+  - To make life easier, folders with applications begin with App-
+  - The Application **do not** count against the total file or folder count
 
+**fGen.ps1**:\
+This is the original script for validating fCln functionallity. It functions in an interactive mode and will generate a set number of files & folders within a specified start & end date.\
+File names and extensions are randomly generated.\
+File sizes are between 1mb and 50mb.
 
 **o365DelegateAccessRpt.ps1**:\
 This is a script to enumerate all users within a O365 tenancy and produce a report of delegate access and user rights
