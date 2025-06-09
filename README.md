@@ -1,7 +1,7 @@
 # PowerShell
 This is a collection of personal PS scripts
 
-Run scripts with: `powershell.exe -ExecutionPolicy Bypass -File .\ScriptName.ps1`
+Run scripts with: `powershell.exe -ExecutionPolicy Bypass -File ScriptName.ps1`
 
 **fCln.ps1**:\
 Version 2.0 changes:
