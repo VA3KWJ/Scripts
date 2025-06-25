@@ -1,18 +1,27 @@
 # Exchange Scripts
 
-Scripts for Exchange Online and on-premises administration.
+Utilities for Exchange Online and on‑premises management.
 
 ## AddDomainUsersWithGroup.ps1
-Creates Active Directory accounts from a CSV file and adds them to a specified group. The CSV requires the columns `Name`, `SamAccountName`, `UserPrincipalName`, `OU`, and `Password`.
+Creates Active Directory accounts from a CSV file and adds them to a chosen
+group. Edit `$groupName` and the CSV path at the top of the script. The CSV must
+contain the columns `Name`, `SamAccountName`, `UserPrincipalName`, `OU` and
+`Password`.
 
 ## ConvertIMCEAEXtoX500.ps1
-Converts an IMCEAEX bounce address to an X.500 address and provides a sample `Set-Mailbox` command.
+Converts an IMCEAEX bounce address to an X.500 alias. If the `-IMCEAEX` parameter
+is omitted the script prompts for the string and outputs a sample `Set-Mailbox`
+command.
 
 ## GetAllOffice365EmailAddresses.ps1
-Third-party script that exports all email addresses and aliases from Exchange Online. See [m365scripts.com](https://m365scripts.com/microsoft365/get-all-office-365-email-address-and-alias-using-powershell) for details.
+Third‑party script that connects with modern authentication and exports all
+addresses and aliases to CSV. See
+[m365scripts.com](https://m365scripts.com/microsoft365/get-all-office-365-email-address-and-alias-using-powershell)
+for full documentation.
 
 ## MFAStatus.ps1
-Connects to MSOnline and outputs a CSV report of users and their MFA enrollment status.
+Uses the MSOnline module to create a CSV report of user MFA enrollment status.
 
 ## o365DelegateAccessRpt.ps1
-Enumerates delegate access for every mailbox. Reports Full Access, Send As and Send on Behalf permissions and can export the results to CSV.
+Enumerates mailbox delegate permissions (Full Access, Send As and Send on
+Behalf) and can export the results to CSV.

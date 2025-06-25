@@ -1,9 +1,13 @@
 # Networking Scripts
 
-Simple connectivity monitors.
+Two lightweight monitoring tools.
 
 ## ConnectionCheck.ps1
-Pings a target computer in a loop and logs failures with timestamps. Every five minutes it logs a "connection stable" message if no failures have occurred.
+Edit `$computer` and `$logFile` in the script to suit your environment. It pings
+the target in a loop, logging failures immediately and a "connection stable"
+message every five minutes of uptime.
 
 ## ConnectionPortCheck.ps1
-Tests connectivity to one or more ports on a host. Results for each port are logged continuously, and a summary entry is written when all ports remain reachable for five minutes.
+Configure `$computer`, `$ports` and `$logFile` at the top of the script. Each
+port is tested repeatedly and results are logged. When all ports stay reachable
+for five minutes a summary entry is written.
