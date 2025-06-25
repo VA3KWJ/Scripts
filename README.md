@@ -1,62 +1,43 @@
-# PowerShell
-This is a collection of personal PS scripts
+# PowerShell Scripts
 
-Run scripts with: `powershell.exe -ExecutionPolicy Bypass -File ScriptName.ps1`
+This repository contains various PowerShell and batch scripts organized by category. Each folder includes a README with details about the scripts it holds.
 
-**fCln.ps1**:\
-Version 2.0 changes:
-- Interactive mode
-  - Execute the script without any switches to run in an interactive mode using defaults or specified parameters
-- Script will now ignore all folders containing Application related files:
-  - *.exe,*.dll,*.com,*.sys,*.ocx,*.msi,*.msu,*.msp,*.drv,*.cpl,*.msc,*.scr,*.vbs,*.ps1,*.bat,*.cmd,*.jar,*.py,*.sh
-- Script will not delete non-empty folders even if their modified date matches
-  
-Examples:
-- powershell.exe -ExecutionPolicy Bypass -File .\Fcln.ps1 -Path C:\Temp -Before 90 # Scans the C:\Temp folder for files created >90 days ago and makes a report\
-- powershell.exe -ExecutionPolicy Bypass -File .\Fcln.ps1 -Path C:\Temp -Date 2025-01-01 # Scans the C:\Temp folder for files created before Jan 1, 2025 and makes a report\
-- powershell.exe -ExecutionPolicy Bypass -File .\Fcln.ps1 -Path C:\Temp -Before 90 -Clean # Scans the C:\Temp folder for files >90s and deletes them\
-- powershell.exe -ExecutionPolicy Bypass -File .\Fcln.ps1 -IncludeUser -Date 2025-01-01 # Scans the entire C:\drive including C:\Users for files created before Jan 1, 2025 and makes a report\
+## Running Scripts
 
-**simOS.ps1**\
-Iterative version 2.0 of fGen.ps1\
-This version is designed to more accurately represent a working file system or live operating system for testing fCln against\
-Like the original, this script will produce a set number of files and folders within the specified start & end dates. Regular files range from ~1 KB to 1 MB, while application files range from ~128 KB to 10 MB.\
-Expanded feature set:
-- Data Only mode: Replicates a data partition or folder
-- OS Mode: Replicates a working Windows Operating System, complete with \Users, \Program Files \Program Files (x86), etc
-- Application generation: When enabled it will prompt for number of application folders and generate files with application related extensions (.exe, .dll, etc) and place within the App- folder
-  - To make life easier, folders with applications begin with App-
-  - The Application **do not** count against the total file or folder count
+Use PowerShell with the **Bypass** execution policy to run any script:
 
-**fGen.ps1**:\
-This is the original script for validating fCln functionallity. It functions in an interactive mode and will generate a set number of files & folders within a specified start & end date.\
-File names and extensions are randomly generated.\
-File sizes are between 1mb and 50mb.
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File <ScriptName.ps1>
+```
 
-**o365DelegateAccessRpt.ps1**:\
-This is a script to enumerate all users within a O365 tenancy and produce a report of delegate access and user rights
+## Folder Overview
 
-**AddDomainUsersWithGroup.ps1**:\
-Quick and dirty script to create new users and assign them to a specified group from a CSV file.
+- **Exchange** – Scripts for Microsoft Exchange and Office&nbsp;365 administration.
+- **Networking** – Simple connectivity monitoring tools.
+- **Windows** – Windows utilities, split into **FileMGMT** and **SysOps**.
 
-**ConnectionCheck.ps1**:\
-This is another quick and dirty script to check connectivity by pinging a target computer and logging the results\
-Sends a single ping to the target, if there is a reply nothing happens. If there is no reply the a failed log is recorded with time stamp.\
-The script checks every 5 min if there have been any failures, if not it will add output to the log indicating connection is stable. This is more of a sanity check
+See the README in each folder for usage information.
 
-**ConnectionPortCheck.ps1**:\
-Similar to the Connection Check script, however it attempts to connect to specific port(s) on the target computer & log the results.\
-This script runs in an endless loop regardless of the results it will loop back to the first port.\
-Ports can be sequential `6000..6060` or comma separated `80,145,443`
+## Script Summary
 
-**ConvertIMCEAEXtoX500.ps1**:\
-Script is used for OnPerm Exchange issues where an alias needs to be converted from IMCEAEX NDR to X500
+### Exchange
+- **AddDomainUsersWithGroup.ps1** – Creates Active Directory users from a CSV file and adds them to a chosen group.
+- **ConvertIMCEAEXtoX500.ps1** – Converts an IMCEAEX bounce address into an X.500 alias string.
+- **GetAllOffice365EmailAddresses.ps1** – Third‑party script that exports all mail addresses and aliases from Exchange&nbsp;Online.
+- **MFAStatus.ps1** – Connects to MSOnline and exports users with their MFA enrollment status.
+- **o365DelegateAccessRpt.ps1** – Generates a report of mailbox delegate permissions (Full Access, Send As and Send on Behalf).
 
-**GetAllOffice365EmailAddresses.ps1**:\
-**Not my script** https://m365scripts.com/microsoft365/get-all-office-365-email-address-and-alias-using-powershell
+### Networking
+- **ConnectionCheck.ps1** – Continuously pings a target computer and logs failures or stability summaries every five minutes.
+- **ConnectionPortCheck.ps1** – Repeatedly tests a list of ports on a host and logs success or failure for each.
 
-**MFAStatus.ps1**:\
-This is a simple script to connect to EXO and check what users have enrolled in MFA then output to CSV
+### Windows/FileMGMT
+- **fCln.ps1** – Cleans files older than a specific date. Supports interactive mode and produces CSV/HTML reports.
+- **fClnPS4.ps1** – PowerShell 4 compatible variant of fCln with CSV reporting.
+- **fGen.ps1** – Generates random files between given dates for testing cleanup operations.
+- **simOS.ps1** – Builds a fake data set or simulated Windows OS directory tree with optional application folders.
 
-**vssComponents.bat**:\
-This script will reregisert the DLL componentes for VSS writers
+### Windows/SysOps
+- **deepClean.ps1** – Comprehensive disk cleanup removing temp files, caches, shadow copies and more.
+- **WinUpdate.ps1** – Resets Windows Update components, re-registers DLLs and forces an update scan.
+- **vssComponents.bat** – Re-registers core Volume Shadow Copy Service components.
