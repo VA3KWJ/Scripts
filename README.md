@@ -57,3 +57,6 @@ Script is used for OnPerm Exchange issues where an alias needs to be converted f
 
 **MFAStatus.ps1**:\
 This is a simple script to connect to EXO and check what users have enrolled in MFA then output to CSV
+
+**vssComponents.bat**:\
+This script will reregisert the DLL componentes for VSS writers
