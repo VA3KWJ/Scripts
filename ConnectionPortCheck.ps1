@@ -1,4 +1,4 @@
-﻿# Set the target computer (hostname or IP)
+# Set the target computer (hostname or IP)
 $computer = "TargetHostOrIP"
 
 # Define the port range
@@ -32,7 +32,7 @@ while ($true) {
         }
     }
 
-# If all ports are stabe and 5 min has elapsed, log a message
+# If all ports are stable and 5 min has elapsed, log a message
 if ($allPortsStable -and (($currentTime - $lastSummaryTime).TotalMinutes -ge 5)) {
     $timeStamp = $currentTime.ToString("yyyy-MM-dd HH:mm:ss")
     $summaryMessage = "$timeStamp - All ports on $computer are stable."
