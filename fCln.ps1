@@ -1,6 +1,11 @@
 <#
-Fcln.ps1 — CSV-backed cleaner + HTML report with Delete/Recycle options
-Compatible with Windows PowerShell 5.1+
+Script Title      : fCln.ps1
+Description       : File clean up by date with CSV/HTML reporting
+Initial Date      : 2026-06-01
+Latest Revision   : 2025-06-25
+Version           : 1.17.1
+Author            : Stuart Waller
+GitHub            : https://github.com/VA3KWJ
 #>
 
 param(
@@ -140,7 +145,6 @@ foreach ($root in $Path) {
     $skip = [System.Collections.Generic.HashSet[string]]::new()
     foreach ($dir in $allDirs) {
         if (-not $ForceExec) {
-            # Check for any application-related file in this directory (case-insensitive)
             $files = Get-ChildItem -Path $dir -File -ErrorAction SilentlyContinue
             if ($files | Where-Object { $appExts -contains $_.Extension.ToLower() }) {
                 $skip.Add($dir) | Out-Null
@@ -148,8 +152,9 @@ foreach ($root in $Path) {
         }
     }
     # Exclude subdirectories of skipped folders
-    foreach ($s in $skip) {
-        Get-ChildItem -Path $s -Directory -Recurse -ErrorAction SilentlyContinue | ForEach-Object { $skip.Add($_.FullName) | Out-Null }
+    foreach ($s in @($skip)) {
+        Get-ChildItem -Path $s -Directory -Recurse -ErrorAction SilentlyContinue |
+          ForEach-Object { $skip.Add($_.FullName) | Out-Null }
     }
     # Process safe dirs only
     foreach ($dir in $allDirs) {
@@ -159,7 +164,7 @@ foreach ($root in $Path) {
             $_.LastWriteTime -lt $Cutoff -and
             -not $_.Attributes.ToString().Split(',').Contains('System') -and
             -not $_.Attributes.ToString().Split(',').Contains('Hidden') -and
-            ($IncludeUser -or -not ($_.FullName -like "$env:SystemDrive\Users*")) -and
+            ($IncludeUser -or -not ($_.FullName -match "\\Users\\|\\FolderRedirection\\")) -and
             ($appExts -notcontains $_.Extension.ToLower())
         } | ForEach-Object {
             "$root,$dir,$($_.Name),$($_.Length),$($_.LastWriteTime.ToString('s'))" |
@@ -172,6 +177,13 @@ foreach ($root in $Path) {
 $records          = Import-Csv -Path $csvPath
 $totalFilesBefore = $records.Count
 $totalSizeBefore  = ($records | Measure-Object Length -Sum).Sum
+
+# 2.1) Format total size for report
+if ($totalSizeBefore -lt 1GB) {
+    $totalSizeFmt = [math]::Round($totalSizeBefore/1MB,2).ToString() + ' MB'
+} else {
+    $totalSizeFmt = [math]::Round($totalSizeBefore/1GB,3).ToString() + ' GB'
+}
 
 # 3) Disk stats before deletion
 $drive      = $Path[0].Split(':')[0] + ':'
@@ -214,6 +226,13 @@ $volAfter  = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='$drive'"
 $usedAfter = $volAfter.Size - $volAfter.FreeSpace
 $recovered = $usedBefore - $usedAfter
 
+# 6.1) Format recovered size
+if ($recovered -lt 1GB) {
+    $recoveredFmt = [math]::Round($recovered/1MB,2).ToString() + ' MB'
+} else {
+    $recoveredFmt = [math]::Round($recovered/1GB,3).ToString() + ' GB'
+}
+
 # 7) Generate HTML report
 $css = @"
 <style>
@@ -231,14 +250,13 @@ $html = @"
 <table>
 <tr><th>Stat</th><th>Value</th></tr>
 <tr><td>Total files</td><td>$totalFilesBefore</td></tr>
-<tr><td>Total size (GB)</td><td>$([math]::Round($totalSizeBefore/1GB,3))</td></tr>
+<tr><td>Total size</td><td>$totalSizeFmt</td></tr>
 <tr><td>Disk used before (GB)</td><td>$([math]::Round($usedBefore/1GB,3))</td></tr>
-<tr><td>Disk used after (GB)</td><td>$([math]::Round($usedAfter/1GB,3))</td></tr>
-<tr><td>Recovered (GB)</td><td>$([math]::Round($recovered/1GB,3))</td></tr>
+<tr><td>Disk used after  (GB)</td><td>$([math]::Round($usedAfter/1GB,3))</td></tr>
+<tr><td>Recovered</td><td>$recoveredFmt</td></tr>
 </table>
 <h2>Files by Directory</h2>
 "@
-
 foreach ($d in ($records | Select-Object -ExpandProperty Directory -Unique)) {
     $subset = $records | Where-Object Directory -EQ $d
     $html += "<details><summary><b>$d</b> — $($subset.Count) files</summary>"
@@ -255,6 +273,15 @@ $html | Set-Content -Path $htmlPath -Encoding UTF8
 # 8) Final output & opening
 Write-Output "CSV:  $csvPath"
 Write-Output "HTML: $htmlPath"
-if ($Recycle) { Write-Output "Files moved to Recycle Bin: $deletedCount" } elseif ($Delete) { Write-Output "Files permanently deleted: $deletedCount" } else { Write-Output "Report-only mode." }
-Start-Process $htmlPath
 
+if ($Delete -or $Recycle) {
+    Write-Output ("Files removed: {0}" -f $deletedCount)
+    Write-Output ("Recovered: {0}" -f $recoveredFmt)
+} else {
+    Write-Output ("Files to remove: {0}" -f $totalFilesBefore)
+    Write-Output ("Potential recoverable: {0}" -f $recoveredFmt)
+    Write-Output "Report-only mode."
+}
+
+# Open the HTML report in the default browser
+Start-Process $htmlPath
