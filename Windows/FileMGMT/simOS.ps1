@@ -1,135 +1,191 @@
+<#
+.SCRIPT       Generate-FakeOS-Structure.ps1
+.DESCRIPTION  Generates a simulated OS or data partition structure with realistic directories and files.
+.INITIALDATE  2025-06-25
+.LASTREVISION 2025-06-25
+.VERSION      1.16.1 - Ensure folder dates, user subfolders, and data in all folders
+.GITHUB       https://github.com/VA3KWJ
+#>
+
 param()
 
+#----------------------------------------
+# Utility Functions
+#----------------------------------------
 function Get-RandomName {
     $length = Get-Random -Minimum 4 -Maximum 11
-    $chars = 'abcdefghijklmnopqrstuvwxyz'
-    $arr = for ($i = 0; $i -lt $length; $i++) { $chars.ToCharArray() | Get-Random }
-    $name = -join $arr
-    return $name.Substring(0,1).ToUpper() + $name.Substring(1)
+    $chars  = 'abcdefghijklmnopqrstuvwxyz'
+    $arr    = for ($i = 0; $i -lt $length; $i++) { $chars.ToCharArray() | Get-Random }
+    return (-join $arr).Substring(0,1).ToUpper() + (-join $arr).Substring(1)
 }
 
 function Get-RandomDate {
-    param(
-        [DateTime]$Start,
-        [DateTime]$End
-    )
+    param([DateTime]$Start,[DateTime]$End)
     $range = $End - $Start
     return $Start.AddTicks((Get-Random -Minimum 0 -Maximum $range.Ticks))
 }
 
-Write-Host "=== Fake OS/Data File Generator ==="
-[string]$rootPath    = Read-Host "Enter the root directory path for creation"
-[string]$mode        = Read-Host "Create Full OS structure? (Y/N). Enter 'Y' for Full OS or 'N' for Data" | ForEach-Object { $_.Trim().ToUpper() }
-[int]$fileCount      = Read-Host "Enter the number of files to create"
-[int]$folderCount    = Read-Host "Enter the number of folders to create"
-[DateTime]$dateStart = Read-Host "Enter the start date (yyyy-MM-dd)" | ForEach-Object { [DateTime]$_ }
-[DateTime]$dateEnd   = Read-Host "Enter the end date (yyyy-MM-dd)"   | ForEach-Object { [DateTime]$_ }
-
-# Ensure root
-if (-Not (Test-Path $rootPath)) { New-Item -Path $rootPath -ItemType Directory -Force | Out-Null }
-
-# Define extensions
-$specialExts     = @('.exe', '.dll')
-$accompanyExts   = @('.log', '.jpg', '.txt', '.pdf')
-
-# Prepare application folders list
-$appFolders = @()
-
-if ($mode -eq 'Y') {
-    # Full OS mode
-    # Ensure Program Files folders
-    $prog1 = Join-Path $rootPath 'Program Files'
-    $prog2 = Join-Path $rootPath 'Program Files (x86)'
-    foreach ($p in @($prog1, $prog2)) {
-        if (-Not (Test-Path $p)) { New-Item -Path $p -ItemType Directory -Force | Out-Null }
-    }
-    # Single parent application folder
-    $rootApp = Join-Path $rootPath ('App-' + (Get-RandomName))
-    New-Item -Path $rootApp -ItemType Directory -Force | Out-Null
-    $appFolders = @($prog1, $prog2, $rootApp)
-} else {
-    # Data mode
-    $incApps = Read-Host "Include applications? (Y/N)" | ForEach-Object { $_.Trim().ToUpper() }
-    if ($incApps -eq 'Y') {
-        [int]$numAppDirs = Read-Host "Number of Application Directories?"
-        for ($i = 1; $i -le $numAppDirs; $i++) {
-            $dir = 'App-' + (Get-RandomName)
-            $path = Join-Path $rootPath $dir
-            New-Item -Path $path -ItemType Directory -Force | Out-Null
-            $appFolders += $path
-        }
-    }
-}
-
-# Function to generate application files in a folder
 function New-AppFiles {
     param([string]$Folder)
-    # 1 exe
-    $exeName = (Get-RandomName) + '.exe'
-    $exePath = Join-Path $Folder $exeName
-    [IO.File]::WriteAllBytes($exePath, (New-Object Byte[] (Get-Random -Minimum 131072 -Maximum 10485760)))
-    Set-ItemProperty -Path $exePath -Name CreationTime  -Value (Get-RandomDate -Start $dateStart -End $dateEnd)
-    Set-ItemProperty -Path $exePath -Name LastWriteTime -Value (Get-RandomDate -Start $dateStart -End $dateEnd)
-    # 2-5 dll
-    for ($j = 1; $j -le (Get-Random -Minimum 2 -Maximum 6); $j++) {
-        $dll = (Get-RandomName) + '.dll'
-        $p = Join-Path $Folder $dll
-        [IO.File]::WriteAllBytes($p, (New-Object Byte[] (Get-Random -Minimum 131072 -Maximum 10485760)))
-        Set-ItemProperty -Path $p -Name CreationTime  -Value (Get-RandomDate -Start $dateStart -End $dateEnd)
-        Set-ItemProperty -Path $p -Name LastWriteTime -Value (Get-RandomDate -Start $dateStart -End $dateEnd)
+    if (-Not (Test-Path $Folder)) { return }
+    # Create primary application files
+    $exe = Join-Path $Folder ((Get-RandomName)+'.exe')
+    [IO.File]::WriteAllBytes($exe,(New-Object Byte[] (Get-Random -Minimum 131072 -Maximum 10485760)))
+    # 2-5 DLL files
+    for ($i=1; $i -le (Get-Random -Minimum 2 -Maximum 5); $i++) {
+        $dll = Join-Path $Folder ((Get-RandomName)+'.dll')
+        [IO.File]::WriteAllBytes($dll,(New-Object Byte[] (Get-Random -Minimum 131072 -Maximum 10485760)))
     }
-    # 2-10 accompanying
-    for ($k = 1; $k -le (Get-Random -Minimum 2 -Maximum 11); $k++) {
-        $ext = $accompanyExts | Get-Random
-        $fn = (Get-RandomName) + $ext
-        $p2 = Join-Path $Folder $fn
-        [IO.File]::WriteAllBytes($p2, (New-Object Byte[] (Get-Random -Minimum 131072 -Maximum 10485760)))
-        Set-ItemProperty -Path $p2 -Name CreationTime  -Value (Get-RandomDate -Start $dateStart -End $dateEnd)
-        Set-ItemProperty -Path $p2 -Name LastWriteTime -Value (Get-RandomDate -Start $dateStart -End $dateEnd)
+    # 2-10 accompanying files
+    $exts = @('.log','.jpg','.txt','.pdf')
+    for ($i=1; $i -le (Get-Random -Minimum 2 -Maximum 10); $i++) {
+        $file = Join-Path $Folder ((Get-RandomName)+($exts | Get-Random))
+        [IO.File]::WriteAllBytes($file,(New-Object Byte[] (Get-Random -Minimum 131072 -Maximum 1048576)))
+    }
+    # 1-3 subfolders
+    for ($i=1; $i -le (Get-Random -Minimum 1 -Maximum 3); $i++) {
+        $sub = Join-Path $Folder (Get-RandomName)
+        New-Item -Path $sub -ItemType Directory -Force | Out-Null
     }
 }
 
-# Generate application files
-foreach ($af in $appFolders) { New-AppFiles -Folder $af }
+#----------------------------------------
+# User Prompts
+#----------------------------------------
+Write-Host '=== Fake OS/Data File Generator ==='
+[string]$rootPath    = Read-Host 'Enter the root directory path'
+[string]$mode        = Read-Host 'Create Full OS structure? (Y/N)' | %{ $_.Trim().ToUpper() }
+[int]$fileCount      = Read-Host 'Enter the number of files to create'
+[int]$folderCount    = Read-Host 'Enter the number of folders to create'
+[DateTime]$dateStart = Read-Host 'Enter the start date (yyyy-MM-dd)' | %{ [DateTime]$_ }
+[DateTime]$dateEnd   = Read-Host 'Enter the end date (yyyy-MM-dd)'   | %{ [DateTime]$_ }
 
-# Create random folders up to 3 levels
-function Create-RandomFolders {
-    param([string]$Base, [int]$Count)
-    $list = New-Object System.Collections.ArrayList
-    [void]$list.Add($Base)
-    $created = 0
-    while ($created -lt $Count) {
-        $parent = Get-Random -InputObject $list
-        $rel = $parent.Substring($rootPath.Length).TrimStart([IO.Path]::DirectorySeparatorChar)
-        $parts = if ($rel) { $rel.Split([IO.Path]::DirectorySeparatorChar) } else { @() }
-        if ($parts.Length -lt 3) {
-            $nf = Join-Path $parent (Get-RandomName)
-            if (-Not (Test-Path $nf)) {
-                New-Item -Path $nf -ItemType Directory -Force | Out-Null
-                [void]$list.Add($nf)
-                $created++
-            }
+# Ensure root path exists and set its dates
+if (-Not (Test-Path $rootPath)) {
+    New-Item -Path $rootPath -ItemType Directory -Force | Out-Null
+    $dt = Get-RandomDate -Start $dateStart -End $dateEnd
+    Set-ItemProperty -Path $rootPath -Name CreationTime -Value $dt
+    Set-ItemProperty -Path $rootPath -Name LastWriteTime  -Value $dt
+}
+
+#----------------------------------------
+# OS Mode Processing
+#----------------------------------------
+$appFolders = @()
+if ($mode -eq 'Y') {
+    # Create core OS directories
+    $coreDirs = @('Program Files','Program Files (x86)','ProgramData','Windows','Windows\System32','temp','Users')
+    foreach ($d in $coreDirs) {
+        $path = Join-Path $rootPath $d
+        if (-Not (Test-Path $path)) {
+            New-Item -Path $path -ItemType Directory -Force | Out-Null
+            New-Item -Path $path | Out-Null # ensure directory creation
         }
     }
-    return $list
+    # Populate Program Files with application folders
+    foreach ($dir in @('Program Files','Program Files (x86)')) {
+        $base = Join-Path $rootPath $dir
+        1..3 | ForEach-Object {
+            $appDir = Join-Path $base ('App-' + (Get-RandomName))
+            New-Item -Path $appDir -ItemType Directory -Force | Out-Null
+            New-AppFiles -Folder $appDir
+            $appFolders += $appDir
+        }
+    }
+    # Populate ProgramData
+    $pdBase = Join-Path $rootPath 'ProgramData'
+    $pdExts = @('.exe','.dll','.log','.msi','.dat','.txt')
+    1..3 | ForEach-Object {
+        $sub = Join-Path $pdBase (Get-RandomName)
+        New-Item -Path $sub -ItemType Directory -Force | Out-Null
+        1..(Get-Random -Minimum 5 -Maximum 10) | ForEach-Object {
+            $file = Join-Path $sub ((Get-RandomName)+($pdExts | Get-Random))
+            [IO.File]::WriteAllBytes($file,(New-Object Byte[] (Get-Random -Minimum 65536 -Maximum 1048576)))
+        }
+    }
+    # Populate Windows and System32
+    $winExts = @('.exe','.dll','.log','.bin','.ini','.dat','.sys')
+    foreach ($sub in @('Windows','Windows\System32')) {
+        $base = Join-Path $rootPath $sub
+        1..(Get-Random -Minimum 10 -Maximum 20) | ForEach-Object {
+            $file = Join-Path $base ((Get-RandomName)+($winExts | Get-Random))
+            [IO.File]::WriteAllBytes($file,(New-Object Byte[] (Get-Random -Minimum 65536 -Maximum 1048576)))
+        }
+    }
+    # Populate temp
+    $tmpBase = Join-Path $rootPath 'temp'
+    $tmpExts = @('.tmp','.temp','.log','.txt')
+    1..(Get-Random -Minimum 5 -Maximum 15) | ForEach-Object {
+        $file = Join-Path $tmpBase ((Get-RandomName)+($tmpExts | Get-Random))
+        [IO.File]::WriteAllBytes($file,(New-Object Byte[] (Get-Random -Minimum 1024 -Maximum 65536)))
+    }
 }
 
-Write-Host "Creating $folderCount random folders..."
-$allFolders = Create-RandomFolders -Base $rootPath -Count $folderCount
-# Exclude application folders
-$nonApp = $allFolders | Where-Object { $appFolders -notcontains $_ }
+#----------------------------------------
+# Data Mode Processing
+#----------------------------------------
+else {
+    # Split folderCount 50/50 between root and Users
+    $halfRoot = [math]::Ceiling($folderCount/2)
+    $halfUser = $folderCount - $halfRoot
+    # Create root folders with subfolders
+    1..$halfRoot | ForEach-Object {
+        $f = Join-Path $rootPath (Get-RandomName)
+        New-Item -Path $f -ItemType Directory -Force | Out-Null
+        1..(Get-Random -Minimum 2 -Maximum 5) | ForEach-Object {
+            $sf = Join-Path $f (Get-RandomName)
+            New-Item -Path $sf -ItemType Directory -Force | Out-Null
+        }
+    }
+    # Create Users folders
+    $usersBase = Join-Path $rootPath 'Users'
+    if (-Not (Test-Path $usersBase)) { New-Item -Path $usersBase -ItemType Directory -Force | Out-Null }
+    $userDirs = 1..$halfUser | ForEach-Object {
+        $u = Join-Path $usersBase (Get-RandomName)
+        New-Item -Path $u -ItemType Directory -Force | Out-Null
+        1..(Get-Random -Minimum 2 -Maximum 5) | ForEach-Object {
+            $sf = Join-Path $u (Get-RandomName)
+            New-Item -Path $sf -ItemType Directory -Force | Out-Null
+        }
+        $u
+    }
 
-# Random files in non-app folders
-Write-Host "Creating $fileCount random files..."
-for ($i = 1; $i -le $fileCount; $i++) {
-    $f = Get-Random -InputObject $nonApp
-    $extsNonApp = @('.txt','.docx','.pdf','.log','.csv','.jpg','.png','.md')
-    $e = $extsNonApp | Get-Random
-    $fn = (Get-RandomName) + $e
-    $fp = Join-Path $f $fn
-    [IO.File]::WriteAllBytes($fp, (New-Object Byte[] (Get-Random -Minimum 1024 -Maximum 1048576)))
-    Set-ItemProperty -Path $fp -Name CreationTime  -Value (Get-RandomDate -Start $dateStart -End $dateEnd)
-    Set-ItemProperty -Path $fp -Name LastWriteTime -Value (Get-RandomDate -Start $dateStart -End $dateEnd)
+    # Standard Windows user subfolders in each user directory
+    $std = @('Documents','Downloads','Pictures','Music','Videos')
+    $allUser = @()
+    foreach ($u in $userDirs) {
+        foreach ($sub in $std) {
+            $path = Join-Path $u $sub
+            New-Item -Path $path -ItemType Directory -Force | Out-Null
+            $allUser += $path
+        }
+    }
+
+    # Distribute files into every folder (no empty)
+    $allFolders = Get-ChildItem -Path $rootPath -Directory -Recurse | Select-Object -ExpandProperty FullName
+    $exts = @('.txt','.docx','.pdf','.log','.csv','.jpg','.png','.md')
+    foreach ($folder in $allFolders) {
+        $num = 1 # at least one file
+        1..$num | ForEach-Object {
+            $file = Join-Path $folder ((Get-RandomName)+($exts | Get-Random))
+            [IO.File]::WriteAllBytes($file,(New-Object Byte[] (Get-Random -Minimum 1024 -Maximum 1048576)))
+        }
+    }
 }
 
-Write-Host "Done: Created application files in $($appFolders.Count) app folders, $folderCount random folders, and $fileCount random files under $rootPath."
+#----------------------------------------
+# Finalize: Randomize folder dates and file dates
+#----------------------------------------
+Get-ChildItem -Path $rootPath -Recurse | ForEach-Object {
+    if ($_.PSIsContainer) {
+        $dt = Get-RandomDate -Start $dateStart -End $dateEnd
+        Set-ItemProperty -Path $_.FullName -Name CreationTime -Value $dt
+        Set-ItemProperty -Path $_.FullName -Name LastWriteTime  -Value $dt
+    } else {
+        $dt = Get-RandomDate -Start $dateStart -End $dateEnd
+        Set-ItemProperty -Path $_.FullName -Name CreationTime -Value $dt
+        Set-ItemProperty -Path $_.FullName -Name LastWriteTime  -Value $dt
+    }
+}
+
+Write-Host 'Done: Structure created with no empty folders and randomized dates.'
