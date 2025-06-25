@@ -3,10 +3,15 @@
 Windows maintenance utilities.
 
 ## deepClean.ps1
-Performs a thorough disk cleanup by purging temporary folders, browser caches, business app data and shadow copies. Can also empty Downloads folders and remove OST files. Outputs reclaimed disk space after the run.
+Performs a thorough disk cleanup by purging temp folders, caches and shadow
+copies. Use `-IncludeDownloads` to also clear user Download folders and
+`-RemoveOST` to delete Outlook OST files. The script reports reclaimed disk space
+at the end.
 
 ## WinUpdate.ps1
-Resets Windows Update by stopping services, clearing caches, re-registering DLLs and forcing a new scan. Prompts for a reboot when complete.
+Stops update services, clears caches, re-registers DLLs and forces a new scan.
+Run as Administrator and reboot when prompted.
 
 ## vssComponents.bat
-Re-registers core Volume Shadow Copy Service DLLs and restarts related services.
+Re-registers core Volume Shadow Copy Service components and restarts related
+services.

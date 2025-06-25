@@ -1,43 +1,56 @@
-# PowerShell Scripts
+# PowerShell Script Collection
 
-This repository contains various PowerShell and batch scripts organized by category. Each folder includes a README with details about the scripts it holds.
+This repository hosts a variety of PowerShell and batch utilities for Exchange,
+networking and general Windows administration.
 
 ## Running Scripts
 
-Use PowerShell with the **Bypass** execution policy to run any script:
+Run scripts with the **Bypass** execution policy:
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -File <ScriptName.ps1>
+powershell.exe -ExecutionPolicy Bypass -File <ScriptPath.ps1>
 ```
 
-## Folder Overview
+## Folder Structure
 
-- **Exchange** – Scripts for Microsoft Exchange and Office&nbsp;365 administration.
-- **Networking** – Simple connectivity monitoring tools.
-- **Windows** – Windows utilities, split into **FileMGMT** and **SysOps**.
+- **Exchange** – Administration scripts for Exchange Online and on‑premises
+  servers.
+- **Networking** – Lightweight connectivity monitoring tools.
+- **Windows** – General utilities divided into **FileMGMT** and **SysOps**.
 
-See the README in each folder for usage information.
+Each folder provides a README with detailed usage notes and prerequisites.
 
-## Script Summary
+## Script Overview
 
 ### Exchange
-- **AddDomainUsersWithGroup.ps1** – Creates Active Directory users from a CSV file and adds them to a chosen group.
-- **ConvertIMCEAEXtoX500.ps1** – Converts an IMCEAEX bounce address into an X.500 alias string.
-- **GetAllOffice365EmailAddresses.ps1** – Third‑party script that exports all mail addresses and aliases from Exchange&nbsp;Online.
-- **MFAStatus.ps1** – Connects to MSOnline and exports users with their MFA enrollment status.
-- **o365DelegateAccessRpt.ps1** – Generates a report of mailbox delegate permissions (Full Access, Send As and Send on Behalf).
+- `AddDomainUsersWithGroup.ps1` – Creates AD users from a CSV and adds them to a
+  specified group.
+- `ConvertIMCEAEXtoX500.ps1` – Converts an IMCEAEX NDR address to an X.500
+  alias string.
+- `GetAllOffice365EmailAddresses.ps1` – Third‑party script that exports all
+  addresses and aliases from Exchange Online.
+- `MFAStatus.ps1` – Reports user MFA enrollment status via the MSOnline module.
+- `o365DelegateAccessRpt.ps1` – Generates a report of mailbox delegate
+  permissions.
 
 ### Networking
-- **ConnectionCheck.ps1** – Continuously pings a target computer and logs failures or stability summaries every five minutes.
-- **ConnectionPortCheck.ps1** – Repeatedly tests a list of ports on a host and logs success or failure for each.
+- `ConnectionCheck.ps1` – Continuously pings a host and logs outages. Configure
+  the host and log file inside the script.
+- `ConnectionPortCheck.ps1` – Tests a range of ports in a loop and logs success
+  or failure. Host, ports and log path are defined at the top of the script.
 
 ### Windows/FileMGMT
-- **fCln.ps1** – Cleans files older than a specific date. Supports interactive mode and produces CSV/HTML reports.
-- **fClnPS4.ps1** – PowerShell 4 compatible variant of fCln with CSV reporting.
-- **fGen.ps1** – Generates random files between given dates for testing cleanup operations.
-- **simOS.ps1** – Builds a fake data set or simulated Windows OS directory tree with optional application folders.
+- `fCln.ps1` – Cleans files older than a given date. Supports interactive mode
+  or parameters such as `-Path`, `-Date` or `-Before`.
+- `fClnPS4.ps1` – PowerShell 4 friendly version of **fCln** that outputs a CSV
+  report.
+- `fGen.ps1` – Interactively generates random files between two dates.
+- `simOS.ps1` – Builds a fake data set or Windows‑like directory tree for
+  testing cleanup routines.
 
 ### Windows/SysOps
-- **deepClean.ps1** – Comprehensive disk cleanup removing temp files, caches, shadow copies and more.
-- **WinUpdate.ps1** – Resets Windows Update components, re-registers DLLs and forces an update scan.
-- **vssComponents.bat** – Re-registers core Volume Shadow Copy Service components.
+- `deepClean.ps1` – Thorough disk cleanup that can also remove Downloads and
+  OST files.
+- `WinUpdate.ps1` – Resets Windows Update components and forces a new scan.
+- `vssComponents.bat` – Re‑registers core Volume Shadow Copy Service
+  components.
