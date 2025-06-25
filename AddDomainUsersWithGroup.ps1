@@ -8,19 +8,19 @@
 $groupName = "Your AD Group"
 
 # Import users from CSV
-$users = Import-CSV -Path "C:\Path\To\CSV"
+$users = Import-Csv -Path "C:\Path\To\CSV"
 
-foreach (#user in #users) {
-	# Create the AD account
-	New-ADUser 	-Name $user.Name `
-				-SamAccountName $user.SameAccountName `
-				-UserPrincipalName $user.UserPrincipalName
-				-Path $user.OU
-				-AccountPassword (ConvertTo-SecureString $user.Password -AsPlainText -Froce) `
-				-Enabled $true
-	Write-Host "Created user: $($user.Name)"
-	
-# Add the new user to the specified AD Group
-Add-ADGroupMember -Identity $groupName -Members $user.SameAccountName
-Write-Host "Added $($user.SamAccountName) to $groupName"
+foreach ($user in $users) {
+    # Create the AD account
+    New-ADUser -Name $user.Name `
+               -SamAccountName $user.SamAccountName `
+               -UserPrincipalName $user.UserPrincipalName `
+               -Path $user.OU `
+               -AccountPassword (ConvertTo-SecureString $user.Password -AsPlainText -Force) `
+               -Enabled $true
+    Write-Host "Created user: $($user.Name)"
+
+    # Add the new user to the specified AD Group
+    Add-ADGroupMember -Identity $groupName -Members $user.SamAccountName
+    Write-Host "Added $($user.SamAccountName) to $groupName"
 }
