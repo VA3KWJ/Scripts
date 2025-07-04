@@ -3,14 +3,34 @@ Script Title      : fCln.ps1
 Description       : File clean up by date with CSV reporting, deletion logging, WhatIf support, and PowerShell v4 compatibility
 Initial Date      : 2026-06-01
 Latest Revision   : 2025-07-04
-Version           : 2.2.4 - Added interactive WhatIf prompt (default Y) when Delete mode selected
+Version           : 2.2.8
 Author            : Stuart Waller
 GitHub            : https://github.com/VA3KWJ
 #>
 
 <#
-fCln.ps1 - File Cleanup Script Changelog
-========================================
+Change Log
+==========
+
+Version 2.2.8 - 2025-07-04
+--------------------------
+- Added -RemoveEmpty switch for non-interactive mode
+- Respects this flag during deletion if set
+
+Version 2.2.7 - 2025-07-04
+--------------------------
+- Added summary line(s) to deletion log file when deletions actually occur
+- Summary includes file count, recovered size, and removed folder count (if applicable)
+
+Version 2.2.6 - 2025-07-04
+--------------------------
+- Removed redundant prompt for "Remove empty folders?" in deletion phase
+- Execution now respects the previously set $RemoveEmpty flag from interactive setup
+
+Version 2.2.5 - 2025-07-04
+--------------------------
+- Moved "Remove empty folders?" prompt into interactive setup
+- Prompt shown only if Delete mode is selected
 
 Version 2.2.4 - 2025-06-27
 --------------------------
@@ -65,7 +85,7 @@ Version 2.0.0 - Initial Public Release (2025-06)
 #>
 
 param(
-    [string[]]$Path        = @(),
+    [string[]]$Path,
     [datetime] $Date,
     [int]      $Before,
     [switch]   $IncludeUser,
@@ -73,8 +93,11 @@ param(
     [switch]   $ReportOnly,
     [switch]   $ForceExec,
     [switch]   $WhatIf,
+    [switch]   $RemoveEmpty,
     [string]   $ReportDir   = "$env:SystemDrive\FclnRpt"
 )
+
+if (-not $Path) { $Path = @() }
 
 # Interactive Mode Setup
 $Interactive = ($PSBoundParameters.Count -eq 0)
@@ -107,6 +130,13 @@ if ($Interactive) {
             if ($wf -eq '' -or $wf -eq 'Y') { $WhatIf = $true; break }
             elseif ($wf -eq 'N')            { $WhatIf = $false; break }
         } while ($true)
+
+        do {
+            $re = Read-Host "Remove empty folders? (Y/N) [N]"
+            $re = $re.Trim().ToUpper()
+            if ($re -eq '' -or $re -eq 'N') { $RemoveEmpty = $false; break }
+            elseif ($re -eq 'Y')            { $RemoveEmpty = $true; break }
+        } while ($true)
     }
 
     do {
@@ -135,12 +165,6 @@ if ($Interactive) {
         }
     } while ($true)
 }
-
-# (Remaining code unchanged from v2.2.3)
-# ... full logic including cutoff, file collection, logging, deletion, empty folder removal,
-# report generation, and WhatIf handling ...
-
-
 
 # Admin Check
 $me = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -300,15 +324,10 @@ if ($Delete) {
         return $removed
     }
 
-    $RemoveEmpty = $false; $removedDirs = @()
-    if ($Interactive) {
-        do {
-            $resp = Read-Host "Remove empty folders? (Y/N) [N]"
-            $resp = $resp.Trim().ToUpper()
-            if ($resp -eq 'Y') { $RemoveEmpty = $true; $removedDirs = Remove-EmptyFolders -Paths $Path -WhatIfLocal:$WhatIf; break }
-            elseif ($resp -eq '' -or $resp -eq 'N') { break }
-        } while ($true)
-    }
+$removedDirs = @()
+if ($RemoveEmpty) {
+    $removedDirs = Remove-EmptyFolders -Paths $Path -WhatIfLocal:$WhatIf
+}
 }
 
 # CSV Report Generation
@@ -335,6 +354,17 @@ $reportObjects | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8
 
 function fmtSize($bytes) { if ($bytes -lt 1GB) { "$( [math]::Round($bytes/1MB,2) ) MB" } else { "$( [math]::Round($bytes/1GB,2) ) GB" } }
 $sizeFmt = fmtSize $totalSizeBefore
+
+# Log summary if not WhatIf
+if ($Delete -and -not $WhatIf) {
+    Add-Content -Path $logPath -Value ""
+    Add-Content -Path $logPath -Value "Summary:"
+    Add-Content -Path $logPath -Value "Files removed: $totalFilesBefore"
+    Add-Content -Path $logPath -Value "Total size recovered: $sizeFmt"
+    if ($RemoveEmpty -and $removedDirs.Count -gt 0) {
+        Add-Content -Path $logPath -Value "Empty folders removed: $($removedDirs.Count)"
+    }
+}
 
 if ($Delete) {
     Write-Output "Files removed: $totalFilesBefore"
