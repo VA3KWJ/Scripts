@@ -13,22 +13,22 @@ powershell.exe -ExecutionPolicy Bypass -File <ScriptPath.ps1>
 
 ## Folder Structure
 
-- **Exchange** – Administration scripts for Exchange Online and on‑premises
-  servers.
+- **Exchange** – Utilities for Exchange Online and on‑premises servers.
 - **Networking** – Lightweight connectivity monitoring tools.
-- **Windows** – General utilities divided into **FileMGMT** and **SysOps**.
+- **O365** – Office 365 reporting scripts.
+- **Windows** – General utilities divided into **AD**, **FileMGMT** and **SysOps**.
 
 Each folder provides a README with detailed usage notes and prerequisites.
 
 ## Script Overview
 
 ### Exchange
-- `AddDomainUsersWithGroup.ps1` – Creates AD users from a CSV and adds them to a
-  specified group.
 - `ConvertIMCEAEXtoX500.ps1` – Converts an IMCEAEX NDR address to an X.500
   alias string.
-- `GetAllOffice365EmailAddresses.ps1` – Third‑party script that exports all
-  addresses and aliases from Exchange Online.
+
+### O365
+- `GetAllOffice365EmailAddresses.ps1` – Exports all addresses and aliases from
+  Exchange Online.
 - `MFAStatus.ps1` – Reports user MFA enrollment status via the MSOnline module.
 - `o365DelegateAccessRpt.ps1` – Generates a report of mailbox delegate
   permissions.
@@ -38,6 +38,10 @@ Each folder provides a README with detailed usage notes and prerequisites.
   the host and log file inside the script.
 - `ConnectionPortCheck.ps1` – Tests a range of ports in a loop and logs success
   or failure. Host, ports and log path are defined at the top of the script.
+
+### Windows/AD
+- `CSVaddUser.ps1` – Creates Active Directory users from a CSV file and adds
+  them to a specified group.
 
 ### Windows/FileMGMT
 - `fCln.ps1` – Cleans files older than a given date. Supports interactive mode
