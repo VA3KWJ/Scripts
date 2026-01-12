@@ -28,7 +28,7 @@ if (![System.Diagnostics.EventLog]::SourceExists($LogSource)) {
 Write-Host "--- STARTING SIMULATION ---" -ForegroundColor Yellow
 Write-Host "Targeting Folder: $TargetDirectory" -ForegroundColor Cyan
 
-# --- 2. TRIGGER BITDEFENDER (The Bonus) ---
+# --- 2. TRIGGER ANTI-VIRUS ---
 Write-Host "Dropping EICAR test file to trigger AV..."
 $EicarString = 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
 $EicarPath = Join-Path $TargetDirectory "malware_test.com"
