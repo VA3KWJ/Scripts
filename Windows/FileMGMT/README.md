@@ -23,3 +23,8 @@ sizes range from 1 MB to 50 MB and names and extensions are random.
 Creates a simulated file system for testing cleanup routines. Choose a simple
 data set or a full Windows‑like directory tree with optional application
 folders.
+
+## simOSv2.ps1
+Version 2 of simulated data generation, now with semi-usable data! This version
+creates valid files that can be opened or viewed. Because it generates "real"
+data it does take longer to complete.
