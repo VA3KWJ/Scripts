@@ -2,13 +2,12 @@
 .SCRIPT       simAttack.ps1
 .DESCRIPTION  Simulates a ransomware attack
 .INITIALDATE  2026-01-12
-.LASTREVISION .
-.VERSION      1.1 - safety net
+.LASTREVISION 2026-01-13
+.VERSION      1.2 - drop note into all folders
 .GITHUB       https://github.com/VA3KWJ
 #>
-
 # CONFIGURATION
-# IMPORTANT: Change this path to point ONLY to your junk data folder
+# IMPORTANT: Ensure this path exists and contains your fake data
 $TargetDirectory = "C:\SimulatedData"
 $EncryptedExtension = ".LOCKED"
 $TargetExtensions = @(".txt", ".docx", ".pdf", ".jpg", ".png", ".xlsx")
@@ -28,7 +27,7 @@ if (![System.Diagnostics.EventLog]::SourceExists($LogSource)) {
 Write-Host "--- STARTING SIMULATION ---" -ForegroundColor Yellow
 Write-Host "Targeting Folder: $TargetDirectory" -ForegroundColor Cyan
 
-# --- 2. TRIGGER ANTI-VIRUS ---
+# --- 2. TRIGGER BITDEFENDER (The Bonus) ---
 Write-Host "Dropping EICAR test file to trigger AV..."
 $EicarString = 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
 $EicarPath = Join-Path $TargetDirectory "malware_test.com"
@@ -44,16 +43,14 @@ catch {
 # --- 3. SIMULATE ENCRYPTION ---
 Write-Host "Scanning for files to 'encrypt'..."
 
-# We use -ErrorAction SilentlyContinue to skip system folders we don't have permission for
-$Files = Get-ChildItem -Path $TargetDirectory -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in $TargetExtensions }
+# Get all files recursively
+$Files = Get-ChildItem -Path $TargetDirectory -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in $TargetExtensions }
 
-$Count = $Files.Count
-if ($Count -eq 0) {
-    Write-Host "WARNING: No matching files found in $TargetDirectory to encrypt." -ForegroundColor Red
-    Write-Host "Ensure the folder contains files with extensions: $($TargetExtensions -join ', ')"
+if ($Files.Count -eq 0) {
+    Write-Host "WARNING: No matching files found to encrypt." -ForegroundColor Red
 }
 else {
-    Write-Host "Found $Count files. Starting encryption simulation..." -ForegroundColor Magenta
+    Write-Host "Found $($Files.Count) files. Starting encryption simulation..." -ForegroundColor Magenta
 
     foreach ($File in $Files) {
         $NewName = $File.Name + $EncryptedExtension
@@ -66,18 +63,39 @@ else {
         }
     }
 
-    # Log the 'Encryption' completion
     Write-EventLog -LogName Application -Source $LogSource -EntryType Error -EventId 666 -Message "Files in $TargetDirectory have been encrypted by SIMULATION_CRYPT."
 }
 
-# --- 4. GENERATE RANSOM NOTE ---
-Write-Host "Dropping Ransom Note..."
+# --- 4. GENERATE RANSOM NOTES (UPDATED) ---
+Write-Host "Dropping Ransom Notes in all directories..."
 $NoteContent = @"
 !!! YOUR FILES ARE ENCRYPTED (SIMULATION) !!!
-ID: SIM-99281
+
+You have 24 hours to send 100 CryptoCurrency or your data will be lost forever
+
+Crypto Wallet: 1111AAAA2222BBBB
+
 Date: $(Get-Date)
+
+This is a drill. No data was lost.
 "@
 
+# Get the root folder + all subfolders
+$AllFolders = Get-ChildItem -Path $TargetDirectory -Recurse -Directory -ErrorAction SilentlyContinue
+$AllFolders += Get-Item $TargetDirectory # Add the root folder itself to the list
+
+foreach ($Folder in $AllFolders) {
+    $NotePath = Join-Path $Folder.FullName "RANSOM_NOTE.txt"
+    try {
+        Set-Content -Path $NotePath -Value $NoteContent -ErrorAction SilentlyContinue
+        Write-Host "Note dropped in: $($Folder.FullName)" -ForegroundColor DarkGreen
+    }
+    catch {
+        Write-Host "Could not drop note in $($Folder.FullName)" -ForegroundColor Yellow
+    }
+}
+
+# Also drop one on the Desktop for visibility
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
 Set-Content -Path "$DesktopPath\RANSOM_NOTE.txt" -Value $NoteContent
 Invoke-Item "$DesktopPath\RANSOM_NOTE.txt"
