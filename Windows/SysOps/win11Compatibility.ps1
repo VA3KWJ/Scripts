@@ -222,21 +222,79 @@ try {
 }
 
 # ---- UEFI Firmware Mode ----
+# The PEFirmwareType registry value is the primary signal, but it can be missing or
+# inaccessible on some machines even when firmware is clearly UEFI. Fall through a
+# chain of alternate signals until one gives a definitive answer.
 try {
-    $fwType = $null
+    $uefiResult = $null   # $true = UEFI, $false = Legacy BIOS, $null = undetermined
+    $uefiMethod = $null
+
+    # Method 1: PEFirmwareType registry value (1 = BIOS/Legacy, 2 = UEFI)
     try {
         $fwType = (Get-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control' -Name 'PEFirmwareType' -ErrorAction Stop).PEFirmwareType
-    } catch {
-        $fwType = $null
+        if ($fwType -eq 2) {
+            $uefiResult = $true; $uefiMethod = 'registry PEFirmwareType=2'
+        } elseif ($fwType -eq 1) {
+            $uefiResult = $false; $uefiMethod = 'registry PEFirmwareType=1'
+        }
+    } catch { }
+
+    # Method 2: $env:firmware_type environment variable
+    if ($null -eq $uefiResult -and $env:firmware_type) {
+        if ($env:firmware_type -eq 'UEFI') {
+            $uefiResult = $true; $uefiMethod = 'env:firmware_type=UEFI'
+        } elseif ($env:firmware_type -eq 'Legacy') {
+            $uefiResult = $false; $uefiMethod = 'env:firmware_type=Legacy'
+        }
     }
 
-    # PEFirmwareType: 1 = BIOS/Legacy, 2 = UEFI
-    if ($fwType -eq 2) {
-        $allPassed = (Add-Result 'UEFI Firmware' $true 'UEFI') -and $allPassed
-    } elseif ($fwType -eq 1) {
-        $allPassed = (Add-Result 'UEFI Firmware' $false 'Legacy BIOS') -and $allPassed
+    # Method 3: Confirm-SecureBootUEFI succeeding (regardless of True/False result) implies
+    # UEFI firmware - it throws on legacy BIOS instead of returning a value.
+    if ($null -eq $uefiResult) {
+        try {
+            Confirm-SecureBootUEFI -ErrorAction Stop | Out-Null
+            $uefiResult = $true; $uefiMethod = 'Confirm-SecureBootUEFI succeeded'
+        } catch { }
+    }
+
+    # Method 4: Boot partition style - GPT boot partitions are booted via UEFI on Windows.
+    # (MBR doesn't definitively mean BIOS, so leave undetermined rather than guessing.)
+    if ($null -eq $uefiResult) {
+        try {
+            $bootPart = Get-CimInstance -ClassName Win32_DiskPartition -ErrorAction Stop |
+                Where-Object { $_.BootPartition } | Select-Object -First 1
+            if ($bootPart -and $bootPart.Type -match 'GPT') {
+                $uefiResult = $true; $uefiMethod = ('boot partition type: {0}' -f $bootPart.Type)
+            }
+        } catch { }
+    }
+
+    # Method 5: Parse setupact.log for the boot environment Windows Setup detected
+    if ($null -eq $uefiResult) {
+        try {
+            $setupLog = Join-Path $env:windir 'Panther\setupact.log'
+            if (Test-Path -Path $setupLog) {
+                $line = Get-Content -Path $setupLog -ErrorAction Stop |
+                    Select-String -Pattern 'Detected boot environment' |
+                    Select-Object -Last 1
+                if ($line -match 'Detected boot environment:\s*EFI') {
+                    $uefiResult = $true; $uefiMethod = 'setupact.log: EFI'
+                } elseif ($line -match 'Detected boot environment:\s*BIOS') {
+                    $uefiResult = $false; $uefiMethod = 'setupact.log: BIOS'
+                }
+            }
+        } catch { }
+    }
+
+    if ($null -ne $uefiResult) {
+        if ($uefiResult) {
+            $detail = 'UEFI (detected via {0})' -f $uefiMethod
+        } else {
+            $detail = 'Legacy BIOS (detected via {0})' -f $uefiMethod
+        }
+        $allPassed = (Add-Result 'UEFI Firmware' $uefiResult $detail) -and $allPassed
     } else {
-        Add-Line '[FAIL] UEFI Firmware - Could not determine firmware type.'
+        Add-Line '[FAIL] UEFI Firmware - Could not determine firmware type via registry, environment variable, Secure Boot, partition style, or setup log.'
         $allPassed = $false
     }
 } catch {
