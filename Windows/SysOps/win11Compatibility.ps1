@@ -3,9 +3,11 @@
     Checks the local machine against Windows 11 minimum hardware requirements.
 
 .DESCRIPTION
-    Evaluates CPU architecture/cores/speed, RAM, system drive free space, TPM version,
-    Secure Boot capability, and UEFI firmware mode. Prints a PASS/FAIL report to the
-    console and writes the same report to C:\temp\win11.txt (creating C:\temp if needed).
+    Evaluates CPU architecture/cores/speed/generation, RAM, system drive free space,
+    system drive type (SSD/HDD), TPM version, Secure Boot capability, and UEFI firmware
+    mode. Prints a PASS/FAIL/WARN report to the console and writes the same report to
+    C:\temp\win11.txt (creating C:\temp if needed). WARN indicates a soft-fail check
+    (e.g. HDD instead of SSD) that is reported but does not affect the overall result.
 
 .NOTES
     Run as Administrator for the most reliable TPM / Secure Boot results.
@@ -40,6 +42,21 @@ function Add-Result {
     $status = if ($Passed) { 'PASS' } else { 'FAIL' }
     Add-Line ('[{0}] {1} - {2}' -f $status, $Check, $Detail)
     return $Passed
+}
+
+function Add-SoftResult {
+    <#
+        Like Add-Result, but a failure is reported as WARN instead of FAIL and never
+        affects the overall PASS/FAIL result. Use for recommendations that Windows 11
+        does not strictly require.
+    #>
+    param(
+        [string]$Check,
+        [bool]$Passed,
+        [string]$Detail
+    )
+    $status = if ($Passed) { 'PASS' } else { 'WARN' }
+    Add-Line ('[{0}] {1} - {2}' -f $status, $Check, $Detail)
 }
 
 Add-Line '=========================================='
@@ -152,6 +169,26 @@ try {
     $allPassed = $false
 }
 
+# ---- Storage (system drive type: SSD vs HDD) ----
+# Windows 11 does not strictly require an SSD, so a spinning HDD is a soft fail (WARN)
+# and does not affect the overall PASS/FAIL result.
+try {
+    $driveLetter = $env:SystemDrive.TrimEnd(':')
+    $physicalDisk = Get-Partition -DriveLetter $driveLetter -ErrorAction Stop |
+        Get-Disk -ErrorAction Stop |
+        Get-PhysicalDisk -ErrorAction Stop |
+        Select-Object -First 1
+
+    if ($physicalDisk -and $physicalDisk.MediaType -and $physicalDisk.MediaType -notin @('Unspecified', $null)) {
+        $isSsd = $physicalDisk.MediaType -eq 'SSD'
+        Add-SoftResult 'System Drive Type (SSD recommended)' $isSsd ('{0} - {1}' -f $physicalDisk.MediaType, $physicalDisk.FriendlyName)
+    } else {
+        Add-Line '[WARN] System Drive Type (SSD recommended) - Media type reported as Unspecified; verify manually.'
+    }
+} catch {
+    Add-Line '[WARN] System Drive Type (SSD recommended) - Could not query physical disk media type (requires Storage module / elevation).'
+}
+
 # ---- TPM ----
 try {
     $tpm = Get-Tpm -ErrorAction Stop
@@ -222,6 +259,8 @@ foreach ($line in $report) {
         Write-Host $line -ForegroundColor Green
     } elseif ($line -match '^\[FAIL\]') {
         Write-Host $line -ForegroundColor Red
+    } elseif ($line -match '^\[WARN\]') {
+        Write-Host $line -ForegroundColor Yellow
     } else {
         Write-Host $line
     }
