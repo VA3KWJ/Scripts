@@ -213,9 +213,12 @@ try {
 }
 
 # ---- Secure Boot ----
+# Windows 11 requires Secure Boot-capable firmware, but not that it be enabled - it can be
+# turned on after install. So a capable-but-disabled result is a soft fail (WARN); only a
+# firmware that can't do Secure Boot at all (call throws) is a hard FAIL.
 try {
     $secureBoot = Confirm-SecureBootUEFI -ErrorAction Stop
-    $allPassed = (Add-Result 'Secure Boot Enabled' $secureBoot ($secureBoot.ToString())) -and $allPassed
+    Add-SoftResult 'Secure Boot Enabled' $secureBoot ($secureBoot.ToString())
 } catch {
     Add-Line '[FAIL] Secure Boot - Not supported/enabled, or firmware is not UEFI (Legacy BIOS mode).'
     $allPassed = $false
