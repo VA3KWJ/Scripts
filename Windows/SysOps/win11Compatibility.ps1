@@ -51,6 +51,56 @@ Add-Line ''
 
 $allPassed = $true
 
+function Get-CpuGenerationStatus {
+    <#
+        Best-effort parse of a CPU name string to estimate whether it meets the
+        Windows 11 minimum of Intel 8th Gen (Coffee Lake) / AMD Ryzen 3000 or newer.
+        This is a heuristic based on model-number conventions, not Microsoft's
+        official supported-CPU list, so exceptions (e.g. Ryzen 2700X) are not
+        accounted for. Anything that can't be confidently parsed is treated as FAIL.
+    #>
+    param([string]$Name)
+
+    $name = $Name.Trim()
+
+    # Intel "Core Ultra" (Meteor Lake and newer) - all newer than 8th Gen
+    if ($name -match 'Core\(TM\)\s+Ultra|Core\s+Ultra') {
+        return [PSCustomObject]@{ Supported = $true; Detail = 'Intel Core Ultra (newer than 8th Gen)' }
+    }
+
+    # Intel Core i3/i5/i7/i9-##### (desktop: 10700K -> 10th gen, mobile: 1135G7 -> 11th gen)
+    if ($name -match 'i[3579]-(\d{3,5})') {
+        $modelNum = $Matches[1]
+        $gen = [int]$modelNum.Substring(0, 1)
+        if ($modelNum.Length -ge 2) {
+            $twoDigit = [int]$modelNum.Substring(0, 2)
+            if ($twoDigit -ge 10 -and $twoDigit -le 14) {
+                $gen = $twoDigit
+            }
+        }
+        $supported = $gen -ge 8
+        return [PSCustomObject]@{ Supported = $supported; Detail = ('Intel Core, detected {0}th Gen (model {1})' -f $gen, $Matches[0]) }
+    }
+
+    # AMD Ryzen Threadripper #### (no class digit, e.g. Threadripper 3960X -> 3000 series)
+    if ($name -match 'Ryzen\s+Threadripper\s+(?:PRO\s+)?(\d{3,5})') {
+        $modelNum = $Matches[1]
+        $series = [int]$modelNum.Substring(0, 1)
+        $supported = $series -ge 3
+        return [PSCustomObject]@{ Supported = $supported; Detail = ('AMD Ryzen Threadripper, detected {0}000 series (model {1})' -f $series, $Matches[1]) }
+    }
+
+    # AMD Ryzen # #### (e.g. Ryzen 5 3600 -> 3000 series, Ryzen 7 5800X -> 5000 series)
+    if ($name -match 'Ryzen\s+[3579]\s+(?:PRO\s+)?(\d{3,5})') {
+        $modelNum = $Matches[1]
+        $series = [int]$modelNum.Substring(0, 1)
+        $supported = $series -ge 3
+        return [PSCustomObject]@{ Supported = $supported; Detail = ('AMD Ryzen, detected {0}000 series (model {1})' -f $series, $Matches[1]) }
+    }
+
+    return [PSCustomObject]@{ Supported = $false; Detail = 'Could not determine CPU generation from name; verify manually against Microsoft''s supported CPU list' }
+}
+
 # ---- OS Architecture ----
 try {
     $os = Get-CimInstance -ClassName Win32_OperatingSystem
@@ -71,7 +121,10 @@ try {
     $cpuOk = ($cores -ge 2) -and ($speedGHz -ge 1.0) -and $is64BitCpu
     $cpuDetail = '{0}, {1} cores, {2} GHz, {3}-bit' -f $cpu.Name.Trim(), $cores, $speedGHz, $cpu.AddressWidth
     $allPassed = (Add-Result 'CPU (2+ cores, 1GHz+, 64-bit)' $cpuOk $cpuDetail) -and $allPassed
-    Add-Line '     NOTE: This does not verify the CPU model is on Microsoft''s official supported list.'
+
+    $genStatus = Get-CpuGenerationStatus -Name $cpu.Name
+    $allPassed = (Add-Result 'CPU Generation (Intel 8th Gen+ / AMD Ryzen 3000+)' $genStatus.Supported $genStatus.Detail) -and $allPassed
+    Add-Line '     NOTE: Generation is inferred from the model name and does not check Microsoft''s official supported-CPU list or its exceptions.'
 } catch {
     Add-Line ('[FAIL] CPU - Error: {0}' -f $_.Exception.Message)
     $allPassed = $false
