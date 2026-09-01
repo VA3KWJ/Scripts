@@ -7,9 +7,10 @@
     folders (via mailbox folder statistics, so it works the same online and on-prem and
     is not limited by the 10-day message-trace window).
 
-    A mailbox is flagged "Active" when it has EITHER:
-      - received a message within the last -ReceivedWithinDays days (default 14), OR
-      - sent a message within the last -SentWithinDays days (default 7).
+    A mailbox is flagged "Active" only when it has sent a message within the last
+    -SentWithinDays days (default 7). The most recent received date is still reported
+    for reference (look-back -ReceivedWithinDays days, default 14) but does not affect
+    the Active/Inactive status.
 
     Results are grouped by SMTP domain, with Active users sorted to the top of each
     domain group, and exported to CSV.
@@ -97,7 +98,7 @@ foreach ($mbx in $mailboxes) {
 
     $receivedRecently = $lastReceived -and $lastReceived -ge $receivedCutoff
     $sentRecently     = $lastSent     -and $lastSent     -ge $sentCutoff
-    $isActive         = $receivedRecently -or $sentRecently
+    $isActive         = $sentRecently
 
     $results += [PSCustomObject]@{
         DisplayName      = $mbx.DisplayName
