@@ -1,4 +1,6 @@
-Collection of security auditing scripts. None of these scripts should actually modify any data and therefore should be safe to use. But as always, use caution!
+# Security Scripts
+
+Collection of security auditing and attack-simulation scripts. None of these scripts should actually modify any data and therefore should be safe to use. But as always, use caution!
 
 YOU & YOU ALONE ARE RESPONSIBLE FOR YOUR OWN ACTIONS. I take no responsibility for what you do with these scripts.
 
